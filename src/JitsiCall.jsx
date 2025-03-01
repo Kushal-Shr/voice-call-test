@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const JitsiCall = ({ roomName, user }) => {
   const jitsiContainer = useRef(null);
-  let jitsi = null;
+  const [jitsi, setJitsi] = useState(null);
+  const [isMuted, setIsMuted] = useState(false);
 
   useEffect(() => {
     const loadJitsiScript = () => {
@@ -20,18 +21,24 @@ const JitsiCall = ({ roomName, user }) => {
 
     const initializeJitsi = () => {
       if (window.JitsiMeetExternalAPI) {
-        jitsi = new window.JitsiMeetExternalAPI("meet.jit.si", {
+        const api = new window.JitsiMeetExternalAPI("meet.jit.si", {
           roomName: roomName,
           parentNode: jitsiContainer.current,
           userInfo: { displayName: user },
           configOverwrite: {
             startWithAudioMuted: false,
-            startWithVideoMuted: true, // Audio call only
+            startWithVideoMuted: true,
           },
           interfaceConfigOverwrite: {
-            TOOLBAR_BUTTONS: ["microphone", "hangup"], // Keep only necessary buttons
+            SHOW_JITSI_WATERMARK: false,
+            SHOW_WATERMARK_FOR_GUESTS: false,
+            SHOW_BRAND_WATERMARK: false,
+            SHOW_POWERED_BY: false,
+            TOOLBAR_BUTTONS: [], // Hides Jitsi UI toolbar
           },
         });
+
+        setJitsi(api);
       }
     };
 
@@ -44,7 +51,40 @@ const JitsiCall = ({ roomName, user }) => {
     };
   }, [roomName, user]);
 
-  return <div ref={jitsiContainer} style={{ height: "500px", width: "100%" }} />;
+  // Custom function to toggle mute
+  const toggleMute = () => {
+    if (jitsi) {
+      jitsi.executeCommand("toggleAudio");
+      setIsMuted((prev) => !prev);
+    }
+  };
+
+  return (
+    <div>
+      {/* Jitsi Meeting Container */}
+      <div ref={jitsiContainer} style={{ height: "100vh", width: "100%" }} />
+
+      {/* Custom Mute Button */}
+      <button
+        onClick={toggleMute}
+        style={{
+          position: "absolute",
+          bottom: "20px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          padding: "10px 20px",
+          backgroundColor: isMuted ? "red" : "green",
+          color: "#fff",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer",
+          fontSize: "16px",
+        }}
+      >
+        {isMuted ? "Unmute" : "Mute"}
+      </button>
+    </div>
+  );
 };
 
 export default JitsiCall;
