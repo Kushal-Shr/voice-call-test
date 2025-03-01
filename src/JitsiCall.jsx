@@ -1,10 +1,18 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 const JitsiCall = () => {
   const jitsiContainer = useRef(null);
   const [jitsi, setJitsi] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
   const [callStarted, setCallStarted] = useState(false);
+  const [participants, setParticipants] = useState([]);
+
+  // Extract name and room from URL parameters
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const userName = queryParams.get("name");
+  const roomName = queryParams.get("room");
 
   useEffect(() => {
     const loadJitsiScript = () => {
@@ -21,10 +29,7 @@ const JitsiCall = () => {
     };
 
     const initializeJitsi = () => {
-      if (window.JitsiMeetExternalAPI) {
-        const roomName = "AutoJoinRoom123"; // Set a fixed room name or use a random one
-        const userName = `User-${Math.floor(Math.random() * 1000)}`; // Generate a random username
-
+      if (window.JitsiMeetExternalAPI && roomName && userName) {
         const api = new window.JitsiMeetExternalAPI("meet.jit.si", {
           roomName: roomName,
           parentNode: jitsiContainer.current,
@@ -38,15 +43,20 @@ const JitsiCall = () => {
             SHOW_WATERMARK_FOR_GUESTS: false,
             SHOW_BRAND_WATERMARK: false,
             SHOW_POWERED_BY: false,
-            TOOLBAR_BUTTONS: [], // Hides the toolbar
+            TOOLBAR_BUTTONS: [], // Hide all buttons
           },
         });
 
         setJitsi(api);
 
-        // Hide the Jitsi iframe after joining
+        // Track participants
+        api.addEventListener("participantJoined", () => updateParticipants(api));
+        api.addEventListener("participantLeft", () => updateParticipants(api));
+
+        // Hide iframe after joining
         setTimeout(() => {
           setCallStarted(true);
+          updateParticipants(api);
         }, 3000);
       }
     };
@@ -58,9 +68,18 @@ const JitsiCall = () => {
         jitsi.dispose();
       }
     };
-  }, []);
+  }, [roomName, userName]);
 
-  // Custom function to toggle mute
+  // ✅ Fetch participant names
+  const updateParticipants = (apiInstance) => {
+    if (apiInstance) {
+      apiInstance.getParticipantsInfo().then((participantList) => {
+        setParticipants(participantList.map((p) => p.displayName || "Unknown"));
+      });
+    }
+  };
+
+  // ✅ Mute/Unmute Self
   const toggleMute = () => {
     if (jitsi) {
       jitsi.executeCommand("toggleAudio");
@@ -70,7 +89,7 @@ const JitsiCall = () => {
 
   return (
     <div>
-      {/* Jitsi Meeting Container (Hidden after joining) */}
+      {/* Hidden Jitsi Container */}
       <div
         ref={jitsiContainer}
         style={{
@@ -84,12 +103,12 @@ const JitsiCall = () => {
         }}
       />
 
-      {/* Custom Full-Width Mute Button */}
+      {/* Mute/Unmute Button */}
       <button
         onClick={toggleMute}
         style={{
-          width: "10vw",
-          height: "7vh",
+          width: "100vw",
+          height: "80vh",
           backgroundColor: isMuted ? "red" : "green",
           color: "#fff",
           border: "none",
@@ -103,6 +122,22 @@ const JitsiCall = () => {
       >
         {isMuted ? "Unmute" : "Mute"}
       </button>
+
+      {/* Display Participants */}
+      <div style={{ textAlign: "center", fontSize: "18px", padding: "10px", backgroundColor: "#f8f8f8" }}>
+        <strong>Participants:</strong>
+        <ul style={{ listStyleType: "none", padding: 0 }}>
+          {participants.length > 0 ? (
+            participants.map((name, index) => (
+              <li key={index} style={{ padding: "5px" }}>
+                {name}
+              </li>
+            ))
+          ) : (
+            <li>No participants yet</li>
+          )}
+        </ul>
+      </div>
     </div>
   );
 };

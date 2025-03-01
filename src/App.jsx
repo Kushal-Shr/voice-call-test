@@ -1,10 +1,15 @@
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Home from "./Home";
 import JitsiCall from "./JitsiCall";
 
 function App() {
   return (
-    <div>
-      <JitsiCall />
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/call" element={<JitsiCall />} />
+      </Routes>
+    </Router>
   );
 }
 
