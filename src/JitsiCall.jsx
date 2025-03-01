@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
-const JitsiCall = ({ roomName, user }) => {
+const JitsiCall = () => {
   const jitsiContainer = useRef(null);
   const [jitsi, setJitsi] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [callStarted, setCallStarted] = useState(false);
 
   useEffect(() => {
     const loadJitsiScript = () => {
@@ -21,24 +22,32 @@ const JitsiCall = ({ roomName, user }) => {
 
     const initializeJitsi = () => {
       if (window.JitsiMeetExternalAPI) {
+        const roomName = "AutoJoinRoom123"; // Set a fixed room name or use a random one
+        const userName = `User-${Math.floor(Math.random() * 1000)}`; // Generate a random username
+
         const api = new window.JitsiMeetExternalAPI("meet.jit.si", {
           roomName: roomName,
           parentNode: jitsiContainer.current,
-          userInfo: { displayName: user },
+          userInfo: { displayName: userName },
           configOverwrite: {
             startWithAudioMuted: false,
-            startWithVideoMuted: true,
+            startWithVideoMuted: true, // Audio-only call
           },
           interfaceConfigOverwrite: {
             SHOW_JITSI_WATERMARK: false,
             SHOW_WATERMARK_FOR_GUESTS: false,
             SHOW_BRAND_WATERMARK: false,
             SHOW_POWERED_BY: false,
-            TOOLBAR_BUTTONS: [], // Hides Jitsi UI toolbar
+            TOOLBAR_BUTTONS: [], // Hides the toolbar
           },
         });
 
         setJitsi(api);
+
+        // Hide the Jitsi iframe after joining
+        setTimeout(() => {
+          setCallStarted(true);
+        }, 3000);
       }
     };
 
@@ -49,7 +58,7 @@ const JitsiCall = ({ roomName, user }) => {
         jitsi.dispose();
       }
     };
-  }, [roomName, user]);
+  }, []);
 
   // Custom function to toggle mute
   const toggleMute = () => {
@@ -61,24 +70,35 @@ const JitsiCall = ({ roomName, user }) => {
 
   return (
     <div>
-      {/* Jitsi Meeting Container */}
-      <div ref={jitsiContainer} style={{ height: "100vh", width: "100%" }} />
+      {/* Jitsi Meeting Container (Hidden after joining) */}
+      <div
+        ref={jitsiContainer}
+        style={{
+          width: "1px",
+          height: "1px",
+          overflow: "hidden",
+          position: "absolute",
+          top: "-1000px",
+          left: "-1000px",
+          display: callStarted ? "none" : "block",
+        }}
+      />
 
-      {/* Custom Mute Button */}
+      {/* Custom Full-Width Mute Button */}
       <button
         onClick={toggleMute}
         style={{
-          position: "absolute",
-          bottom: "20px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          padding: "10px 20px",
+          width: "10vw",
+          height: "7vh",
           backgroundColor: isMuted ? "red" : "green",
           color: "#fff",
           border: "none",
-          borderRadius: "5px",
           cursor: "pointer",
-          fontSize: "16px",
+          fontSize: "24px",
+          fontWeight: "bold",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
         {isMuted ? "Unmute" : "Mute"}
